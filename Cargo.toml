@@ -1,0 +1,17 @@
+[package]
+name = "throttled_json_rpc"
+version = "0.0.1"
+authors = ["Aiden McClelland <aiden.k.mcclelland@gmail.com>"]
+repository = "https://github.com/DR-BoneZ/throttled-json-rpc-rs"
+homepage = "https://github.com/DR-BoneZ/throttled-json-rpc-rs"
+license = "MIT"
+readme = "README.md"
+documentation = "http://docs.rs/throttled_json_rpc/"
+description = "Throttled JSON RPC API client for Rust."
+edition = "2018"
+
+[dev-dependencies]
+failure = "0.1.5"
+reqwest = "0.9.18"
+serde = { version = "1.0.92", features = ["derive"] }
+serde_json = "1.0.39"
