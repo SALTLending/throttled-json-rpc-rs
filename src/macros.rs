@@ -107,7 +107,7 @@ macro_rules! jsonrpc_client {
                     method,
                     params,
                 }.polymorphize();
-                if self.inner().reqs.len() >= self.inner().max_batch_size {
+                if self.inner().max_batch_size > 0 && self.inner().reqs.len() >= self.inner().max_batch_size {
                     self.flush()?;
                 }
                 let id = self.inner().reqs.len();
