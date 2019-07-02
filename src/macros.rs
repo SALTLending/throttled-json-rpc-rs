@@ -219,8 +219,8 @@ macro_rules! jsonrpc_client {
                 })
             }
 
-            pub fn batcher<'a, T: for<'de> Deserialize<'de>>(&'a self) -> (&'a Self, ReqBatcher<$struct_name, T>) {
-                (self, ReqBatcher {
+            pub fn batcher<'a, T: for<'de> Deserialize<'de>>(&'a self) -> BatcherPair<'a, T> {
+                BatcherPair(self, ReqBatcher {
                     reqs: Vec::new(),
                     resps: Vec::new(),
                     max_batch_size: self.max_batch_size,
