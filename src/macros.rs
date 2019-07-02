@@ -167,15 +167,16 @@ macro_rules! jsonrpc_client {
                 };
                 let res_res: Result<Vec<(usize, T)>, Error> = json.into_iter().map(|reply| {
                     Ok(match reply.result {
-                        Some(b) => (reply.id.unwrap_or(0), b),
+                        Some(b) => (reply.id.ok_or(failure::format_err!("missing id in response"))?, b),
                         _ => failure::bail!("{:?}", reply.error),
                     })
                 }).collect();
                 let res = res_res?;
-                let req_count = self.1.reqs.len();
+                let req_count = self.inner().reqs.len();
+                let resps_count = self.inner().resps.len();
                 self.inner().resps.extend(std::iter::repeat_with(|| None).take(req_count));
                 for r in res {
-                    self.inner().resps[r.0] = Some(r.1);
+                    self.inner().resps[resps_count + r.0] = Some(r.1);
                 }
                 self.inner().reqs = Vec::new();
                 Ok(())
