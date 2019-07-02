@@ -64,6 +64,7 @@ macro_rules! jsonrpc_client {
 
         pub mod reply {
             use failure::Error;
+            use super::*;
             $(
                 $(
                     $(#[$attr_b])*
