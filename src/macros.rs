@@ -24,6 +24,30 @@ macro_rules! jsonrpc_client {
         use std::marker::PhantomData;
         use std::sync::{Arc, Condvar, Mutex};
 
+        /**
+            There are times that we want to clean the trailing nulls, because then it works better for some implementations
+            of Nodes where it figures out the optionals by the count of the params via the json-rpc.
+        */
+        fn params_cleanse(value: serde_json::Value) -> serde_json::Value {
+            use serde_json::Value::{Array, Null};
+            match value {
+                Array(values) => Array(
+                    values
+                        .into_iter()
+                        .rev()
+                        .skip_while(|some_value| match some_value {
+                            Null => true,
+                            _ => false,
+                        })
+                        .collect::<Vec<serde_json::Value>>()
+                        .into_iter()
+                        .rev()
+                        .collect::<Vec<serde_json::Value>>(),
+                ),
+                _ => value,
+            }
+        }
+
         #[derive(Deserialize)]
         struct RpcResponse<T> {
             pub result: Option<T>,
@@ -49,7 +73,7 @@ macro_rules! jsonrpc_client {
             pub fn polymorphize(self) -> RpcRequest<serde_json::Value> {
                 RpcRequest {
                     method: self.method,
-                    params: serde_json::to_value(self.params).unwrap(),
+                    params:params_cleanse(serde_json::from_str(&serde_json::to_string(&self.params).unwrap()).unwrap()),
                 }
             }
 
@@ -233,7 +257,7 @@ macro_rules! jsonrpc_client {
                 let mut res = self.dispatch(&RpcRequest {
                     method,
                     params,
-                })?;
+                }.polymorphize())?;
                 let txt = res.text()?;
                 Ok(txt)
             }
