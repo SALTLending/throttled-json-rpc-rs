@@ -73,7 +73,7 @@ macro_rules! jsonrpc_client {
             pub fn polymorphize(self) -> RpcRequest<serde_json::Value> {
                 RpcRequest {
                     method: self.method,
-                    params:params_cleanse(serde_json::from_str(&serde_json::to_string(&self.params).unwrap()).unwrap()),
+                    params: params_cleanse(serde_json::to_value(&self.params).unwrap()),
                 }
             }
 
@@ -185,8 +185,8 @@ macro_rules! jsonrpc_client {
                 let text = res.text()?;
                 let json = match serde_json::from_str::<Vec<RpcResponse<T>>>(&text) {
                     Ok(a) => a,
-                    Err(_) => {
-                        failure::bail!("{:?}", serde_json::from_str::<RpcResponse<serde_json::Value>>(&text)?.error)
+                    Err(e) => {
+                        failure::bail!("{}:\n{}", e, &text)
                     }
                 };
                 let res_res: Result<Vec<(usize, T)>, Error> = json.into_iter().map(|reply| {
@@ -305,7 +305,8 @@ macro_rules! jsonrpc_client {
                     $(#[$attr_a])*
                     pub fn $method_a(&self$(, $arg_name_a: $arg_ty_a)*) -> Result<$return_ty_a, Error> {
                         let txt = self.call_method(stringify!($method_a), ($($arg_name_a,)*))?;
-                        let body: RpcResponse<$return_ty_a> = serde_json::from_str(&txt)?;
+                        let body: RpcResponse<$return_ty_a> = serde_json::from_str(&txt)
+                            .map_err(|e| failure::format_err!("{}:\n{}", e, &txt))?;
                         match body.error {
                             Some(e) => failure::bail!("{:?}", e),
                             None => body.result.ok_or(failure::format_err!("null response")),
@@ -326,7 +327,7 @@ macro_rules! jsonrpc_client {
                                     Err(_) => (),
                                 };
                             )+
-                            Err(failure::format_err!("Cannot deserialize to any variant of reply::{}", stringify!($method_b)))
+                            Err(failure::format_err!("Cannot deserialize to any variant of reply::{}:\n{}", stringify!($method_b), &txt))
                         })(txt)?;
                         Ok(body)
                     }
