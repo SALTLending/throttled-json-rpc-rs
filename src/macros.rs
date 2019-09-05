@@ -222,7 +222,7 @@ macro_rules! jsonrpc_client {
             user: Option<String>,
             pass: Option<String>,
             max_concurrency: usize,
-            rps: usize,
+            rps: f64,
             counter: (Mutex<usize>, Condvar),
             last_req: Mutex<std::time::Instant>,
             max_batch_size: usize,
@@ -230,7 +230,7 @@ macro_rules! jsonrpc_client {
         }
 
         impl $struct_name {
-            pub fn new(uri: String, user: Option<String>, pass: Option<String>, max_concurrency: usize, rps: usize, max_batch_size: usize) -> Arc<Self> {
+            pub fn new(uri: String, user: Option<String>, pass: Option<String>, max_concurrency: usize, rps: f64, max_batch_size: usize) -> Arc<Self> {
                 Arc::new($struct_name {
                     uri,
                     user,
@@ -271,8 +271,12 @@ macro_rules! jsonrpc_client {
                     _ => (),
                 };
                 builder = builder.json(data);
-                if self.rps > 0 {
-                    let wait = std::time::Duration::from_secs(1) / self.rps as u32;
+                if self.rps > 0.0 {
+                    let wait = if self.rps > 1.0 {
+                        std::time::Duration::from_secs(1) / self.rps as u32
+                    } else {
+                         std::time::Duration::from_secs(1) * (1.0 / self.rps) as u32
+                    };
                     let mut lock = self.last_req.lock().unwrap();
                     let elapsed = lock.elapsed();
                     if elapsed < wait {

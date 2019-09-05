@@ -1,6 +1,6 @@
 [package]
 name = "throttled_json_rpc"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Aiden McClelland <aiden.k.mcclelland@gmail.com>"]
 repository = "https://github.com/DR-BoneZ/throttled-json-rpc-rs"
 homepage = "https://github.com/DR-BoneZ/throttled-json-rpc-rs"
