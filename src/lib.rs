@@ -46,7 +46,10 @@ impl ReqBatcher {
     pub fn new(client_options: ClientOptions) -> Self {
         let (ask_request, requests) = futures::channel::mpsc::channel(10_000);
         let chunk_size = client_options.batching.max(1);
-        let concurrent_count = client_options.concurrent.max(1);
+        let concurrent_count = match client_options.concurrent {
+            0 => usize::max_value(),
+            x => x,
+        };
         let request_batcher = ReqBatcher { ask_request };
         let client_options = Arc::new(client_options);
         tokio::spawn(async move {
