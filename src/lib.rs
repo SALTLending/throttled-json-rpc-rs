@@ -56,12 +56,10 @@ impl ReqBatcher {
             requests
                 .chunks(chunk_size)
                 .map(|x| (client_options.clone(), x))
-                .for_each_concurrent(concurrent_count, |(client_options, xs)| {
-                    async move {
-                        request_json_rpc(&client_options, xs)
-                            .await
-                            .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
-                    }
+                .for_each_concurrent(concurrent_count, |(client_options, xs)| async move {
+                    request_json_rpc(&client_options, xs)
+                        .await
+                        .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
                 })
                 .await;
         });
