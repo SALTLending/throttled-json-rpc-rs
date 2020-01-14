@@ -5,6 +5,7 @@ use reqwest;
 use serde_json::Value;
 use std::sync::Arc;
 
+#[derive(Debug, Clone)]
 pub struct ReqBatcher {
     ask_request: futures::channel::mpsc::Sender<RequestCallbackPair>,
 }
