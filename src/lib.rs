@@ -12,11 +12,11 @@ pub struct ReqBatcher {
 
 #[derive(Debug, Clone)]
 pub struct ClientOptions {
-    uri: String,
-    rps: RPS,
-    batching: usize,
-    concurrent: usize,
-    client_auth: Option<ClientAuth>,
+    pub uri: String,
+    pub rps: RPS,
+    pub batching: usize,
+    pub concurrent: usize,
+    pub client_auth: Option<ClientAuth>,
 }
 
 #[derive(Debug, Clone)]
@@ -54,11 +54,13 @@ impl ReqBatcher {
             requests
                 .chunks(chunk_size)
                 .map(|x| (req_batcher.clone(), x))
-                .for_each_concurrent(concurrent_count, |(req_batcher, xs)| async move {
-                    req_batcher
-                        .request_json_rpc(xs)
-                        .await
-                        .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
+                .for_each_concurrent(concurrent_count, |(req_batcher, xs)| {
+                    async move {
+                        req_batcher
+                            .request_json_rpc(xs)
+                            .await
+                            .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
+                    }
                 })
                 .await;
         });
