@@ -29,8 +29,11 @@ pub struct RPS(RpsState);
 
 impl RPS {
     pub fn new(value: f64) -> Result<Self> {
-        if value <= 0.0 {
+        if value < 0.0 {
             return Err(anyhow::anyhow!("Invalid RPS value: {} <= 0", value));
+        }
+        if value == 0.0 {
+            return Ok(RPS(RpsState::None));
         }
         Ok(RPS(RpsState::Limit(value)))
     }
@@ -50,10 +53,12 @@ impl ReqBatcher {
             requests
                 .chunks(chunk_size)
                 .map(|x| (client_options.clone(), x))
-                .for_each_concurrent(concurrent_count, |(client_options, xs)| async move {
-                    request_json_rpc(&client_options, xs)
-                        .await
-                        .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
+                .for_each_concurrent(concurrent_count, |(client_options, xs)| {
+                    async move {
+                        request_json_rpc(&client_options, xs)
+                            .await
+                            .unwrap_or_else(|e| log::error!("Error in client: {:?}", e))
+                    }
                 })
                 .await;
         });
