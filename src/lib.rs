@@ -73,9 +73,9 @@ impl ReqBatcher {
     {
         let (sender, receiver) = oneshot::channel();
         self.ask_request.try_send((method, params, sender))?;
-        let received_value = receiver.await?;
-        let value = serde_json::from_value(received_value?)
-            .map_err(|_| anyhow!("Could not convert {:?} into type", received_value?))?;
+        let received_value = receiver.await??;
+        let value = serde_json::from_value(received_value)
+            .map_err(|_| anyhow!("Could not convert {:?} into type", received_value))?;
         Ok(value)
     }
 }
