@@ -1,3 +1,9 @@
+#![deny(missing_docs, missing_debug_implementations)]
+
+//! Request batcher is a request client for anything that is json rpc [1].
+//! There are quite a few limiters on this client, like the RPS, max batching, and even how many
+//! allowed concurrently
+
 use anyhow::{anyhow, bail, Context, Result};
 use futures::channel::oneshot;
 use futures::prelude::*;
@@ -5,30 +11,52 @@ use reqwest;
 use serde_json::Value;
 use std::sync::Arc;
 
+/// The Request Batcher is the system that will sit on a
+/// json rpc client, that will limit how many at once can talk to the rpc. Granted
+/// it can't know about what other clients are around, so make sure to have as few as possible of these
+/// running about.
 #[derive(Debug, Clone)]
 pub struct ReqBatcher {
     ask_request: futures::channel::mpsc::Sender<RequestCallbackPair>,
 }
 
+/// Configurations for getting a rpc client up and running.
 #[derive(Debug, Clone)]
 pub struct ClientOptions {
+    /// This is the full path, web path like https://test:123
     pub uri: String,
+    /// This is the limits on how many requests per second are allowed
     pub rps: RPS,
+    /// This is how many requests to batch together to the json rpc,
+    /// there are some that don't allow any batching, so the limit would be 1
     pub batching: usize,
+    /// This is wondering how many connections could be opened at once
     pub concurrent: usize,
+    /// Auth for RPC
     pub client_auth: Option<ClientAuth>,
 }
 
+/// Most RPC Clients have a password and username because there are methods
+/// that are supposed to be restricted. For example in the bitcoin rpc's,
+/// the restricted methods are those relating to the hot wallet that the system
+/// uses. There are other reasons to have a password system, and that is just
+/// to limit who can use the service.
 #[derive(Debug, Clone)]
 pub struct ClientAuth {
+    /// User names
     pub user: String,
+    /// Passwords, could be nothing, since there are some services that may not be protected
     pub password: Option<String>,
 }
 
+/// We want the enum behind a new type because we need to ensure that there
+/// isn't a limit with 0.0 for the value. And since we are using a float we can't
+/// ensure that the value is postive.
 #[derive(Debug, Clone)]
 pub struct RPS(RpsState);
 
 impl RPS {
+    /// Create a RPS with a limit being a value > 0, and as a float.
     pub fn new(value: f64) -> Result<Self> {
         if value < 0.0 {
             return Err(anyhow::anyhow!("Invalid RPS value: {} <= 0", value));
@@ -38,12 +66,14 @@ impl RPS {
         }
         Ok(RPS(RpsState::Limit(value)))
     }
+    /// Create a rps that indicates there are no limits based on requests per second
     pub fn none() -> Self {
         RPS(RpsState::None)
     }
 }
 
 impl ReqBatcher {
+    /// Creating a new request batcher, one needs to send down the options for the request batcher
     pub fn new(client_options: ClientOptions) -> Self {
         let (ask_request, requests) = futures::channel::mpsc::channel(10_000);
         let chunk_size = client_options.batching.max(1);
@@ -67,6 +97,9 @@ impl ReqBatcher {
         request_batcher
     }
 
+    /// The point of the request batcher is to make a request. So in json rpc there are
+    /// methods and the params for the rpc client. See [1]
+    /// 1: https://en.wikipedia.org/wiki/JSON-RPC
     pub async fn request<'a, T>(&mut self, method: String, params: Vec<Value>) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
